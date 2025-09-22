@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Occupancy Dashboard (Demo)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    .big { font-size: 48px; margin: 0; }
+    .status-ok { color: #0a7b32; }
+    .status-over { color: #b00020; }
+    .muted { color: #666; }
+    .row { display: flex; gap: 12px; align-items: baseline; }
+    .pill { padding: 4px 8px; border-radius: 999px; background: #eee; font-size: 12px; }
+    footer { margin-top: 24px; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <h2>Occupancy Dashboard — Demo</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="row">
+        <h1 id="count" class="big status-ok">0</h1>
+        <span id="status" class="pill">OK</span>
+      </div>
+      <div class="muted">Zone: <b>lounge</b> • Max: <span id="max">40</span></div>
+      <div class="muted">Last update: <span id="ts">—</span></div>
+    </div>
+    <div class="card">
+      <canvas id="trend" height="160"></canvas>
+    </div>
+    <div class="card">
+      <h3>Events</h3>
+      <ul id="events"></ul>
+    </div>
+    <div class="card">
+      <h3>Connection</h3>
+      <div>Broker WS: <code>ws://localhost:9001</code></div>
+      <div>Topic (state): <code>site/demo/occupancy/lounge/state</code></div>
+      <div>Topic (events): <code>site/demo/occupancy/lounge/events</code></div>
+      <div id="conn" class="muted">Connecting…</div>
+    </div>
+  </div>
+
+  <!-- Paho MQTT (browser) -->
+  <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const brokerHost = "localhost";
+    const brokerPort = 9001;
+    const stateTopic = "site/demo/occupancy/lounge/state";
+    const eventsTopic = "site/demo/occupancy/lounge/events";
+
+    const countEl = document.getElementById('count');
+    const statusEl = document.getElementById('status');
+    const tsEl = document.getElementById('ts');
+    const maxEl = document.getElementById('max');
+    const connEl = document.getElementById('conn');
+    const eventsEl = document.getElementById('events');
+
+    // Trend chart
+    const ctx = document.getElementById('trend').getContext('2d');
+    const trend = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Count', data: [] }]},
+      options: {
+        animation: false,
+        scales: { x: { display: false }, y: { beginAtZero: true, suggestedMax: 50 } },
+        plugins: { legend: { display: false }}
+      }
+    });
+
+    function setStatus(count, status, max, ts) {
+      countEl.textContent = count;
+      maxEl.textContent = max;
+      statusEl.textContent = status;
+      tsEl.textContent = new Date(ts * 1000).toLocaleTimeString();
+      if (status === "OVER") {
+        countEl.classList.remove('status-ok'); countEl.classList.add('status-over');
+        statusEl.style.background = '#ffd6d6';
+      } else {
+        countEl.classList.remove('status-over'); countEl.classList.add('status-ok');
+        statusEl.style.background = '#e6f5ea';
+      }
+      // update chart
+      const now = new Date();
+      trend.data.labels.push(now.toLocaleTimeString());
+      trend.data.datasets[0].data.push(count);
+      if (trend.data.labels.length > 60) { // keep last 60 points
+        trend.data.labels.shift();
+        trend.data.datasets[0].data.shift();
+      }
+      trend.update('none');
+    }
+
+    function addEventRow(evt) {
+      const li = document.createElement('li');
+      li.textContent = `${new Date(evt.ts*1000).toLocaleTimeString()} — ${evt.event} (count ${evt.count} / max ${evt.max})`;
+      eventsEl.prepend(li);
+      if (eventsEl.childElementCount > 20) {
+        eventsEl.removeChild(eventsEl.lastChild);
+      }
+    }
+
+    // MQTT client
+    const clientId = "dash-" + Math.random().toString(16).slice(2);
+    const client = new Paho.MQTT.Client(brokerHost, Number(brokerPort), "/mqtt", clientId);
+
+    client.onConnectionLost = (resp) => {
+      connEl.textContent = "Disconnected — retrying…";
+      setTimeout(connect, 1000);
+    };
+    client.onMessageArrived = (message) => {
+      try {
+        const payload = JSON.parse(message.payloadString);
+        if (message.destinationName.endsWith("/state")) {
+          setStatus(payload.count, payload.status, payload.max, payload.ts);
+        } else if (message.destinationName.endsWith("/events")) {
+          addEventRow(payload);
+        }
+      } catch (e) {
+        console.error("Bad payload", e);
+      }
+    };
+
+    function connect() {
+      client.connect({
+        timeout: 3,
+        onSuccess: () => {
+          connEl.textContent = "Connected";
+          client.subscribe(stateTopic, { qos: 0 });
+          client.subscribe(eventsTopic, { qos: 1 });
+        },
+        onFailure: (err) => {
+          connEl.textContent = "Connect failed — retrying…";
+          setTimeout(connect, 1000);
+        },
+        useSSL: false
+      });
+    }
+    connect();
+  </script>
+
+  <footer>Demo only. No video leaves your machine. Open an issue if you want RTSP support + multi-zone view.</footer>
+</body>
+</html>
