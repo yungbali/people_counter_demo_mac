@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Configuration - ROI & Entrance Line Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #ecf0f1;
+            padding: 20px;
+            border-right: 1px solid #bdc3c7;
+        }
+        
+        .canvas-area {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .camera-selector {
+            margin-bottom: 20px;
+        }
+        
+        .camera-selector select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .mode-buttons {
+            margin-bottom: 20px;
+        }
+        
+        .mode-buttons button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .mode-buttons button.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .mode-buttons button:not(.active) {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .mode-buttons button:hover {
+            opacity: 0.8;
+        }
+        
+        .config-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #bdc3c7;
+        }
+        
+        .config-section h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .config-actions button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .config-actions button:hover {
+            background: #ecf0f1;
+        }
+        
+        .config-actions button.danger {
+            background: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }
+        
+        .config-actions button.danger:hover {
+            background: #c0392b;
+        }
+        
+        .canvas-container {
+            position: relative;
+            border: 2px solid #34495e;
+            border-radius: 4px;
+            background: #2c3e50;
+        }
+        
+        #configCanvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .canvas-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .instructions {
+            margin-top: 15px;
+            padding: 15px;
+            background: #d5dbdb;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .status-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 4px;
+        }
+        
+        .status-panel h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .status-item {
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .status-item strong {
+            color: #2c3e50;
+        }
+        
+        .error-list {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .error-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .success-message {
+            background: #27ae60;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .grid-controls {
+            margin-bottom: 15px;
+        }
+        
+        .grid-controls label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .grid-controls input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .grid-controls input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Camera Configuration</h1>
+            <p>Configure ROI polygons and entrance lines for camera detection zones</p>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <div class="camera-selector">
+                    <label for="cameraSelect"><strong>Select Camera:</strong></label>
+                    <select id="cameraSelect">
+                        <option value="">Choose a camera...</option>
+                        <option value="entrance">Entrance Camera</option>
+                        <option value="lounge_1">Lounge Area 1</option>
+                        <option value="lounge_2">Lounge Area 2</option>
+                    </select>
+                </div>
+                
+                <div class="mode-buttons">
+                    <button id="viewModeBtn" class="active">View Only</button>
+                    <button id="roiModeBtn">Draw ROI Polygon</button>
+                    <button id="lineModeBtn">Draw Entrance Line</button>
+                </div>
+                
+                <div class="config-section">
+                    <h3>ROI Polygon</h3>
+                    <div class="config-actions">
+                        <button id="startRoiBtn">Start Drawing</button>
+                        <button id="clearRoiBtn" class="danger">Clear ROI</button>
+                        <button id="loadRoiBtn">Load from Config</button>
+                        <button id="saveRoiBtn">Save ROI</button>
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <h3>Entrance Line</h3>
+                    <div class="config-actions">
+                        <button id="startLineBtn">Start Drawing</button>
+                        <button id="clearLineBtn" class="danger">Clear Line</button>
+                        <button id="loadLineBtn">Load from Config</button>
+                        <button id="saveLineBtn">Save Line</button>
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <h3>Grid Settings</h3>
+                    <div class="grid-controls">
+                        <label>
+                            <input type="checkbox" id="gridEnabled" checked>
+                            Show Grid
+                        </label>
+                        <label>
+                            <input type="checkbox" id="snapToGrid">
+                            Snap to Grid
+                        </label>
+                        <label>
+                            Grid Size: <span id="gridSizeValue">20</span>px
+                            <input type="range" id="gridSize" min="10" max="50" value="20">
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="status-panel">
+                    <h4>Configuration Status</h4>
+                    <div id="statusContent">
+                        <div class="status-item">
+                            <strong>Mode:</strong> <span id="currentMode">View Only</span>
+                        </div>
+                        <div class="status-item">
+                            <strong>ROI Points:</strong> <span id="roiPointCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <strong>Entrance Line:</strong> <span id="lineStatus">Not configured</span>
+                        </div>
+                    </div>
+                    <div id="errorContainer"></div>
+                    <div id="successContainer"></div>
+                </div>
+            </div>
+            
+            <div class="canvas-area">
+                <div class="canvas-container">
+                    <canvas id="configCanvas" width="640" height="480"></canvas>
+                    <div class="canvas-overlay">
+                        <div id="canvasInstructions">Select a camera to begin configuration</div>
+                    </div>
+                </div>
+                
+                <div class="instructions">
+                    <strong>Instructions:</strong>
+                    <ul id="instructionsList">
+                        <li>Select a camera from the dropdown above</li>
+                        <li>Choose a configuration mode (ROI Polygon or Entrance Line)</li>
+                        <li>Click on the canvas to add points</li>
+                        <li>For ROI: Click near the first point to close the polygon</li>
+                        <li>For Entrance Line: Click two points to define the line</li>
+                        <li>Use the action buttons to save, load, or clear configurations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CameraConfigUI {
+            constructor() {
+                this.canvas = document.getElementById('configCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.currentMode = 'view_only';
+                this.selectedCamera = '';
+                this.isDrawing = false;
+                this.roiPoints = [];
+                this.entranceLinePoints = [];
+                this.selectedPointIndex = null;
+                this.isDragging = false;
+                
+                // UI settings
+                this.settings = {
+                    gridEnabled: true,
+                    snapToGrid: false,
+                    gridSize: 20,
+                    pointRadius: 5,
+                    lineWidth: 2,
+                    roiColor: '#00ff00',
+                    entranceLineColor: '#ff0000',
+                    pointColor: '#ffff00',
+                    gridColor: '#444444'
+                };
+                
+                this.initializeEventListeners();
+                this.updateUI();
+                this.draw();
+            }
+            
+            initializeEventListeners() {
+                // Camera selection
+                document.getElementById('cameraSelect').addEventListener('change', (e) => {
+                    this.selectedCamera = e.target.value;
+                    this.loadCameraConfig();
+                    this.updateUI();
+                });
+                
+                // Mode buttons
+                document.getElementById('viewModeBtn').addEventListener('click', () => this.setMode('view_only'));
+                document.getElementById('roiModeBtn').addEventListener('click', () => this.setMode('roi_polygon'));
+                document.getElementById('lineModeBtn').addEventListener('click', () => this.setMode('entrance_line'));
+                
+                // ROI actions
+                document.getElementById('startRoiBtn').addEventListener('click', () => this.startRoiDrawing());
+                document.getElementById('clearRoiBtn').addEventListener('click', () => this.clearRoi());
+                document.getElementById('loadRoiBtn').addEventListener('click', () => this.loadRoiConfig());
+                document.getElementById('saveRoiBtn').addEventListener('click', () => this.saveRoiConfig());
+                
+                // Entrance line actions
+                document.getElementById('startLineBtn').addEventListener('click', () => this.startLineDrawing());
+                document.getElementById('clearLineBtn').addEventListener('click', () => this.clearLine());
+                document.getElementById('loadLineBtn').addEventListener('click', () => this.loadLineConfig());
+                document.getElementById('saveLineBtn').addEventListener('click', () => this.saveLineConfig());
+                
+                // Grid controls
+                document.getElementById('gridEnabled').addEventListener('change', (e) => {
+                    this.settings.gridEnabled = e.target.checked;
+                    this.draw();
+                });
+                
+                document.getElementById('snapToGrid').addEventListener('change', (e) => {
+                    this.settings.snapToGrid = e.target.checked;
+                });
+                
+                document.getElementById('gridSize').addEventListener('input', (e) => {
+                    this.settings.gridSize = parseInt(e.target.value);
+                    document.getElementById('gridSizeValue').textContent = e.target.value;
+                    this.draw();
+                });
+                
+                // Canvas events
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.handleRightClick(e);
+                });
+            }
+            
+            setMode(mode) {
+                this.currentMode = mode;
+                this.isDrawing = false;
+                this.selectedPointIndex = null;
+                this.isDragging = false;
+                
+                // Update button states
+                document.querySelectorAll('.mode-buttons button').forEach(btn => btn.classList.remove('active'));
+                
+                if (mode === 'view_only') {
+                    document.getElementById('viewModeBtn').classList.add('active');
+                    this.canvas.style.cursor = 'default';
+                } else if (mode === 'roi_polygon') {
+                    document.getElementById('roiModeBtn').classList.add('active');
+                    this.canvas.style.cursor = 'crosshair';
+                } else if (mode === 'entrance_line') {
+                    document.getElementById('lineModeBtn').classList.add('active');
+                    this.canvas.style.cursor = 'crosshair';
+                }
+                
+                this.updateUI();
+                this.draw();
+            }
+            
+            handleCanvasClick(e) {
+                if (!this.selectedCamera) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                let x = e.clientX - rect.left;
+                let y = e.clientY - rect.top;
+                
+                if (this.settings.snapToGrid) {
+                    x = Math.round(x / this.settings.gridSize) * this.settings.gridSize;
+                    y = Math.round(y / this.settings.gridSize) * this.settings.gridSize;
+                }
+                
+                if (this.currentMode === 'roi_polygon' && this.isDrawing) {
+                    this.addRoiPoint(x, y);
+                } else if (this.currentMode === 'entrance_line' && this.isDrawing) {
+                    this.addLinePoint(x, y);
+                }
+            }
+            
+            handleMouseDown(e) {
+                if (this.currentMode === 'view_only') return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                this.selectedPointIndex = this.selectPoint(x, y);
+                if (this.selectedPointIndex !== null) {
+                    this.isDragging = true;
+                    this.canvas.style.cursor = 'move';
+                }
+            }
+            
+            handleMouseMove(e) {
+                if (!this.isDragging || this.selectedPointIndex === null) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                let x = e.clientX - rect.left;
+                let y = e.clientY - rect.top;
+                
+                if (this.settings.snapToGrid) {
+                    x = Math.round(x / this.settings.gridSize) * this.settings.gridSize;
+                    y = Math.round(y / this.settings.gridSize) * this.settings.gridSize;
+                }
+                
+                this.movePoint(this.selectedPointIndex, x, y);
+                this.draw();
+            }
+            
+            handleMouseUp(e) {
+                this.isDragging = false;
+                this.canvas.style.cursor = this.currentMode === 'view_only' ? 'default' : 'crosshair';
+            }
+            
+            handleRightClick(e) {
+                if (this.currentMode === 'view_only') return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const pointIndex = this.selectPoint(x, y);
+                if (pointIndex !== null) {
+                    this.deletePoint(pointIndex);
+                }
+            }
+            
+            addRoiPoint(x, y) {
+                // Check for polygon closure
+                if (this.roiPoints.length >= 3) {
+                    const firstPoint = this.roiPoints[0];
+                    const distance = Math.sqrt((x - firstPoint.x) ** 2 + (y - firstPoint.y) ** 2);
+                    if (distance < this.settings.pointRadius * 2) {
+                        this.finishRoiDrawing();
+                        return;
+                    }
+                }
+                
+                this.roiPoints.push({ x, y });
+                this.updateUI();
+                this.draw();
+            }
+            
+            addLinePoint(x, y) {
+                this.entranceLinePoints.push({ x, y });
+                
+                if (this.entranceLinePoints.length >= 2) {
+                    this.finishLineDrawing();
+                }
+                
+                this.updateUI();
+                this.draw();
+            }
+            
+            finishRoiDrawing() {
+                this.isDrawing = false;
+                const errors = this.validateRoiPolygon();
+                this.showValidationResults(errors);
+                this.updateUI();
+            }
+            
+            finishLineDrawing() {
+                this.isDrawing = false;
+                const errors = this.validateEntranceLine();
+                this.showValidationResults(errors);
+                this.updateUI();
+            }
+            
+            selectPoint(x, y) {
+                let points = [];
+                if (this.currentMode === 'roi_polygon') {
+                    points = this.roiPoints;
+                } else if (this.currentMode === 'entrance_line') {
+                    points = this.entranceLinePoints;
+                }
+                
+                for (let i = 0; i < points.length; i++) {
+                    const distance = Math.sqrt((x - points[i].x) ** 2 + (y - points[i].y) ** 2);
+                    if (distance < this.settings.pointRadius * 2) {
+                        return i;
+                    }
+                }
+                return null;
+            }
+            
+            movePoint(index, x, y) {
+                if (this.currentMode === 'roi_polygon' && index < this.roiPoints.length) {
+                    this.roiPoints[index] = { x, y };
+                } else if (this.currentMode === 'entrance_line' && index < this.entranceLinePoints.length) {
+                    this.entranceLinePoints[index] = { x, y };
+                }
+            }
+            
+            deletePoint(index) {
+                if (this.currentMode === 'roi_polygon' && index < this.roiPoints.length) {
+                    this.roiPoints.splice(index, 1);
+                } else if (this.currentMode === 'entrance_line' && index < this.entranceLinePoints.length) {
+                    this.entranceLinePoints.splice(index, 1);
+                }
+                this.updateUI();
+                this.draw();
+            }
+            
+            startRoiDrawing() {
+                this.setMode('roi_polygon');
+                this.roiPoints = [];
+                this.isDrawing = true;
+                this.updateInstructions('Click on the canvas to add ROI points. Click near the first point to close the polygon.');
+            }
+            
+            startLineDrawing() {
+                this.setMode('entrance_line');
+                this.entranceLinePoints = [];
+                this.isDrawing = true;
+                this.updateInstructions('Click two points on the canvas to define the entrance line.');
+            }
+            
+            clearRoi() {
+                this.roiPoints = [];
+                this.updateUI();
+                this.draw();
+                this.showSuccessMessage('ROI polygon cleared');
+            }
+            
+            clearLine() {
+                this.entranceLinePoints = [];
+                this.updateUI();
+                this.draw();
+                this.showSuccessMessage('Entrance line cleared');
+            }
+            
+            loadCameraConfig() {
+                // This would typically load from the backend
+                // For demo purposes, we'll use some sample data
+                if (this.selectedCamera === 'entrance') {
+                    this.roiPoints = [
+                        { x: 100, y: 100 },
+                        { x: 500, y: 100 },
+                        { x: 500, y: 400 },
+                        { x: 100, y: 400 }
+                    ];
+                    this.entranceLinePoints = [
+                        { x: 200, y: 50 },
+                        { x: 200, y: 450 }
+                    ];
+                } else {
+                    this.roiPoints = [];
+                    this.entranceLinePoints = [];
+                }
+                this.draw();
+            }
+            
+            validateRoiPolygon() {
+                const errors = [];
+                
+                if (this.roiPoints.length < 3) {
+                    errors.push('ROI polygon must have at least 3 points');
+                }
+                
+                // Check area
+                if (this.roiPoints.length >= 3) {
+                    const area = this.calculatePolygonArea(this.roiPoints);
+                    if (area < 100) {
+                        errors.push(`ROI polygon area too small: ${area.toFixed(1)} square pixels`);
+                    }
+                }
+                
+                return errors;
+            }
+            
+            validateEntranceLine() {
+                const errors = [];
+                
+                if (this.entranceLinePoints.length !== 2) {
+                    errors.push('Entrance line must have exactly 2 points');
+                    return errors;
+                }
+                
+                const p1 = this.entranceLinePoints[0];
+                const p2 = this.entranceLinePoints[1];
+                const length = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+                
+                if (length < 10) {
+                    errors.push(`Entrance line too short: ${length.toFixed(1)} pixels`);
+                }
+                
+                return errors;
+            }
+            
+            calculatePolygonArea(points) {
+                let area = 0;
+                const n = points.length;
+                for (let i = 0; i < n; i++) {
+                    const j = (i + 1) % n;
+                    area += points[i].x * points[j].y;
+                    area -= points[j].x * points[i].y;
+                }
+                return Math.abs(area) / 2;
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                if (this.settings.gridEnabled) {
+                    this.drawGrid();
+                }
+                
+                // Draw ROI polygon
+                if (this.roiPoints.length > 0) {
+                    this.drawRoiPolygon();
+                }
+                
+                // Draw entrance line
+                if (this.entranceLinePoints.length > 0) {
+                    this.drawEntranceLine();
+                }
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = this.settings.gridColor;
+                this.ctx.lineWidth = 1;
+                this.ctx.setLineDash([2, 2]);
+                
+                for (let x = 0; x <= this.canvas.width; x += this.settings.gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
+                }
+                
+                for (let y = 0; y <= this.canvas.height; y += this.settings.gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                    this.ctx.stroke();
+                }
+                
+                this.ctx.setLineDash([]);
+            }
+            
+            drawRoiPolygon() {
+                if (this.roiPoints.length < 2) return;
+                
+                // Draw polygon lines
+                this.ctx.strokeStyle = this.settings.roiColor;
+                this.ctx.lineWidth = this.settings.lineWidth;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.roiPoints[0].x, this.roiPoints[0].y);
+                
+                for (let i = 1; i < this.roiPoints.length; i++) {
+                    this.ctx.lineTo(this.roiPoints[i].x, this.roiPoints[i].y);
+                }
+                
+                // Close polygon if we have at least 3 points and not currently drawing
+                if (this.roiPoints.length >= 3 && !this.isDrawing) {
+                    this.ctx.closePath();
+                    this.ctx.fillStyle = this.settings.roiColor + '20'; // Semi-transparent
+                    this.ctx.fill();
+                }
+                
+                this.ctx.stroke();
+                
+                // Draw points
+                this.roiPoints.forEach((point, index) => {
+                    this.drawPoint(point.x, point.y, index === this.selectedPointIndex);
+                });
+            }
+            
+            drawEntranceLine() {
+                if (this.entranceLinePoints.length < 1) return;
+                
+                // Draw line
+                if (this.entranceLinePoints.length === 2) {
+                    this.ctx.strokeStyle = this.settings.entranceLineColor;
+                    this.ctx.lineWidth = this.settings.lineWidth;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.entranceLinePoints[0].x, this.entranceLinePoints[0].y);
+                    this.ctx.lineTo(this.entranceLinePoints[1].x, this.entranceLinePoints[1].y);
+                    this.ctx.stroke();
+                }
+                
+                // Draw points
+                this.entranceLinePoints.forEach((point, index) => {
+                    this.drawPoint(point.x, point.y, index === this.selectedPointIndex);
+                });
+            }
+            
+            drawPoint(x, y, selected = false) {
+                this.ctx.fillStyle = selected ? '#ffffff' : this.settings.pointColor;
+                this.ctx.strokeStyle = '#000000';
+                this.ctx.lineWidth = 1;
+                
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, this.settings.pointRadius, 0, 2 * Math.PI);
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
+            
+            updateUI() {
+                document.getElementById('currentMode').textContent = this.currentMode.replace('_', ' ').toUpperCase();
+                document.getElementById('roiPointCount').textContent = this.roiPoints.length;
+                document.getElementById('lineStatus').textContent = 
+                    this.entranceLinePoints.length === 2 ? 'Configured' : 'Not configured';
+            }
+            
+            updateInstructions(text) {
+                document.getElementById('canvasInstructions').textContent = text;
+            }
+            
+            showValidationResults(errors) {
+                const errorContainer = document.getElementById('errorContainer');
+                const successContainer = document.getElementById('successContainer');
+                
+                errorContainer.innerHTML = '';
+                successContainer.innerHTML = '';
+                
+                if (errors.length > 0) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-list';
+                    errorDiv.innerHTML = '<strong>Validation Errors:</strong><ul>' + 
+                        errors.map(error => `<li>${error}</li>`).join('') + '</ul>';
+                    errorContainer.appendChild(errorDiv);
+                } else {
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'success-message';
+                    successDiv.textContent = 'Configuration validated successfully!';
+                    successContainer.appendChild(successDiv);
+                }
+            }
+            
+            showSuccessMessage(message) {
+                const successContainer = document.getElementById('successContainer');
+                successContainer.innerHTML = '';
+                
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = message;
+                successContainer.appendChild(successDiv);
+                
+                setTimeout(() => {
+                    successContainer.innerHTML = '';
+                }, 3000);
+            }
+            
+            saveRoiConfig() {
+                if (this.roiPoints.length < 3) {
+                    this.showValidationResults(['ROI polygon must have at least 3 points']);
+                    return;
+                }
+                
+                const errors = this.validateRoiPolygon();
+                if (errors.length > 0) {
+                    this.showValidationResults(errors);
+                    return;
+                }
+                
+                // Here you would send the configuration to the backend
+                console.log('Saving ROI config for camera:', this.selectedCamera, this.roiPoints);
+                this.showSuccessMessage('ROI configuration saved successfully!');
+            }
+            
+            saveLineConfig() {
+                if (this.entranceLinePoints.length !== 2) {
+                    this.showValidationResults(['Entrance line must have exactly 2 points']);
+                    return;
+                }
+                
+                const errors = this.validateEntranceLine();
+                if (errors.length > 0) {
+                    this.showValidationResults(errors);
+                    return;
+                }
+                
+                // Here you would send the configuration to the backend
+                console.log('Saving entrance line config for camera:', this.selectedCamera, this.entranceLinePoints);
+                this.showSuccessMessage('Entrance line configuration saved successfully!');
+            }
+            
+            loadRoiConfig() {
+                // This would load from backend
+                this.showSuccessMessage('ROI configuration loaded from server');
+            }
+            
+            loadLineConfig() {
+                // This would load from backend
+                this.showSuccessMessage('Entrance line configuration loaded from server');
+            }
+        }
+        
+        // Initialize the UI when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CameraConfigUI();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+# Occupancy Security System Configuration
+
+site:
+  site_id: "main_facility"
+  name: "Main Facility Security System"
+  timezone: "UTC"
+  
+  cameras:
+    entrance:
+      rtsp_url: "rtsp://camera1.local/stream"
+      camera_type: "entrance"
+      zone_id: "entrance_zone"
+      roi_polygon: [[100, 100], [500, 100], [500, 400], [100, 400]]
+      entrance_line: [200, 50, 200, 450]
+      enabled: true
+    
+    lounge_1:
+      rtsp_url: "rtsp://camera2.local/stream"
+      camera_type: "zone"
+      zone_id: "lounge_zone_1"
+      roi_polygon: [[0, 0], [640, 0], [640, 480], [0, 480]]
+      enabled: true
+    
+    lounge_2:
+      rtsp_url: "rtsp://camera3.local/stream"
+      camera_type: "zone"
+      zone_id: "lounge_zone_2"
+      roi_polygon: [[50, 50], [590, 50], [590, 430], [50, 430]]
+      enabled: true
+  
+  zones:
+    entrance_zone:
+      name: "Main Entrance"
+      max_capacity: 10
+      alert_threshold: 8
+      zone_type: "entrance"
+      enabled: true
+    
+    lounge_zone_1:
+      name: "Lounge Area 1"
+      max_capacity: 20
+      alert_threshold: 18
+      zone_type: "lounge"
+      enabled: true
+    
+    lounge_zone_2:
+      name: "Lounge Area 2"
+      max_capacity: 15
+      alert_threshold: 13
+      zone_type: "lounge"
+      enabled: true
+  
+  alert_rules:
+    threshold_exceeded:
+      zone_id: "lounge_zone_1"
+      rule_type: "THRESHOLD_EXCEEDED"
+      threshold_value: 40
+      hold_duration: 3
+      channels: ["whatsapp", "sms", "email"]
+      rate_limit: 10
+      enabled: true
+    
+    camera_offline:
+      zone_id: "entrance_zone"
+      rule_type: "CAMERA_OFFLINE"
+      threshold_value: 1
+      hold_duration: 60
+      channels: ["sms", "email"]
+      rate_limit: 5
+      enabled: true
+  
+  notification_channels:
+    whatsapp:
+      api_key: "${WHATSAPP_API_KEY}"
+      recipients: ["+234XXXXXXXXX"]
+      rate_limit: 10
+      enabled: true
+    
+    sms:
+      api_key: "${SMS_API_KEY}"
+      recipients: ["+234XXXXXXXXX"]
+      rate_limit: 20
+      enabled: true
+    
+    email:
+      api_key: "${EMAIL_API_KEY}"
+      recipients: ["security@company.com"]
+      rate_limit: 50
+      enabled: true
+
+mqtt:
+  host: "localhost"
+  port: 1883
+  username: null
+  password: null
+  topic_prefix: "site"
+  keepalive: 60
+
+database:
+  timeseries_url: "postgresql://localhost:5432/occupancy_ts"
+  metadata_url: "postgresql://localhost:5432/occupancy_meta"
+  pool_size: 10
+  max_overflow: 20
+
+# Processing intervals (seconds)
+detection_interval: 0.1
+aggregation_interval: 1.0
+alert_check_interval: 5.0
+
+# Performance settings
+max_concurrent_cameras: 10
+frame_buffer_size: 30
+
+# Optional features
+biometric_enabled: false
+aws_telemetry_enabled: false

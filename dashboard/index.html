@@ -45,7 +45,7 @@
   </div>
 
   <!-- Paho MQTT (browser) -->
-  <script src="https://unpkg.com/paho-mqtt/mqttws31.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -105,9 +105,16 @@
       }
     }
 
+    // Wait for Paho MQTT library to load
+    if (typeof Paho === 'undefined') {
+      console.error('Paho MQTT library not loaded');
+      connEl.textContent = "MQTT library failed to load";
+      return;
+    }
+
     // MQTT client
     const clientId = "dash-" + Math.random().toString(16).slice(2);
-    const client = new Paho.MQTT.Client(brokerHost, Number(brokerPort), "/mqtt", clientId);
+    const client = new Paho.MQTT.Client(brokerHost, Number(brokerPort), "", clientId);
 
     client.onConnectionLost = (resp) => {
       connEl.textContent = "Disconnected — retrying…";
@@ -127,14 +134,17 @@
     };
 
     function connect() {
+      console.log("Attempting to connect to MQTT WebSocket...");
       client.connect({
         timeout: 3,
         onSuccess: () => {
+          console.log("MQTT WebSocket connected successfully!");
           connEl.textContent = "Connected";
           client.subscribe(stateTopic, { qos: 0 });
           client.subscribe(eventsTopic, { qos: 1 });
         },
         onFailure: (err) => {
+          console.error("MQTT WebSocket connection failed:", err);
           connEl.textContent = "Connect failed — retrying…";
           setTimeout(connect, 1000);
         },

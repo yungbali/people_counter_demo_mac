@@ -1,6 +1,20 @@
-# Mac Webcam People Counting Demo
+# Occupancy Security System
 
-A tiny demo to count people using your Mac's webcam. It uses YOLOv8n and optional tracking to stabilize counts. You can draw a polygon ROI and set a max occupancy threshold. When the count stays above the threshold for a few seconds, your Mac will speak an alert.
+A comprehensive 3-camera occupancy and security monitoring system built on the foundation of the Mac webcam demo. The system provides real-time people counting, security monitoring, and alert management across multiple zones with enterprise-grade features.
+
+## System Overview
+
+The system extends the original single-camera demo to support:
+- Multiple RTSP camera feeds with zone-based monitoring
+- Advanced person tracking and de-duplication across cameras
+- Threshold-based alerting with multi-channel notifications (WhatsApp, SMS, Email)
+- Security dashboard for real-time monitoring and incident management
+- Optional biometric authentication and watchlist monitoring
+- On-premises deployment with optional cloud telemetry
+
+## Original Demo
+
+The original Mac webcam demo is still available as `mac_webcam_people_counter.py`. It uses YOLOv8n and optional tracking to stabilize counts with polygon ROI support and threshold alerts.
 
 ## Prereqs
 - macOS with Python 3.10+
@@ -76,3 +90,55 @@ Event:
 ```json
 {"ts": 1727000123, "site": "demo", "zone": "lounge", "camera": "webcam-0", "event": "THRESHOLD_EXCEEDED", "count": 45, "max": 40, "hold_seconds": 3}
 ```
+
+## Enhanced System Architecture
+
+The enhanced system follows a microservices architecture:
+
+```
+src/
+├── models/          # Core data models and types
+├── services/        # Service interfaces and implementations
+├── database/        # Database connections and repositories
+├── api/            # REST API endpoints
+├── config/         # Configuration management
+└── utils/          # Utility functions
+
+config/             # System configuration files
+dashboard/          # Web dashboard (enhanced)
+```
+
+### Key Components
+
+- **Computer Vision Service**: Multi-camera RTSP processing with ROI management
+- **Aggregation Service**: Cross-camera tracking and de-duplication
+- **Alert Service**: Threshold monitoring and multi-channel notifications
+- **Security Dashboard**: Real-time monitoring and incident management
+- **Configuration Management**: Centralized system configuration
+
+### Configuration
+
+The system uses YAML configuration files in the `config/` directory. See `config/system.yaml` for the complete configuration structure including:
+
+- Camera RTSP URLs and ROI definitions
+- Zone capacity and alert thresholds
+- Notification channel settings (WhatsApp, SMS, Email)
+- MQTT and database connection parameters
+
+### Getting Started with Enhanced System
+
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Configure System**:
+   - Edit `config/system.yaml` with your camera URLs and settings
+   - Set up notification channel API keys
+
+3. **Run System**:
+   ```bash
+   python -m src.main
+   ```
+
+The system will initialize all services and begin monitoring configured camera feeds.
